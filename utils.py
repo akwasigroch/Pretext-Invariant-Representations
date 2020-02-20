@@ -7,7 +7,7 @@ import random
 import os
 import shutil
 from PIL import Image
-
+import datetime
 
 
 
@@ -293,3 +293,14 @@ def pil_loader(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('RGB')
+
+class Logger:
+    def __init__(self, file_name):
+        self.file_name = file_name
+        index = ['Epoch']
+        with open('{}.csv'.format(self.file_name), 'w') as file:
+            file.write('Epoch,Loss,Time\n')
+    def update(self, epoch, loss):
+        now = datetime.datetime.now()
+        with open('{}.csv'.format(self.file_name), 'a') as file:
+            file.write('{},{:.4f},{}\n'.format(epoch,loss,now))

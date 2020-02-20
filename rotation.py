@@ -6,17 +6,15 @@ from torchvision.datasets import DatasetFolder
 import numpy as np
 import random
 import torch.optim as optim
-from utils import AverageMeter, Progbar, Memory, ModelCheckpoint, NoiseContrastiveEstimator, pil_loader
+from utils import AverageMeter, Progbar, Memory, ModelCheckpoint, NoiseContrastiveEstimator, pil_loader, Logger
 
 
-
-
-device = torch.device('cuda:0')
+device = torch.device('cuda:2')
 data_dir = '/media/dysk/datasets/isic_challenge_2017/train'
-negative_nb = 1000 # number in negative examples in NCE
-
-
-
+negative_nb = 1000 # number of negative examples in NCE
+lr = 0.001
+checkpoint_dir = 'rotation_models'
+log_filename = 'pretraining_log_rotation'
 
 class RotationLoader(DatasetFolder):
     def __init__(self, root_dir):
@@ -94,14 +92,16 @@ class Network(nn.Module):
 
 net = Network().to(device)
 
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
 
 memory = Memory(size = len(dataset), weight= 0.5, device = device)
 memory.initialize(net, train_loader)
 
 
-checkpoint = ModelCheckpoint(mode = 'min', directory = 'rotation_pretraining')
+checkpoint = ModelCheckpoint(mode = 'min', directory = checkpoint_dir )
 noise_contrastive_estimator = NoiseContrastiveEstimator(device)
+logger = Logger(log_filename)
+
 loss_weight = 0.5
 
 for epoch in range(1000):
@@ -122,7 +122,7 @@ for epoch in range(1000):
         optimizer.zero_grad()
         
         #forward, loss, backward, step
-        output = net(images = images,rotation = rotation, mode = 1)
+        output = net(images = images, rotation = rotation, mode = 1)
         
         
         loss_1 = noise_contrastive_estimator(representations, output[1], index, memory, negative_nb = negative_nb)
@@ -130,7 +130,6 @@ for epoch in range(1000):
         loss = loss_weight * loss_1 + (1 - loss_weight) * loss_2
         
         loss.backward()
-
         optimizer.step()
 
         #update representation memory
@@ -139,7 +138,7 @@ for epoch in range(1000):
         # update metric and bar
         train_loss.update(loss.item(), images.shape[0])
         bar.update(step, values=[('train_loss', train_loss.return_avg())])
-
+    logger.update(epoch, train_loss.return_avg())
 
     #save model if improved
     checkpoint.save_model(net, train_loss.return_avg(), epoch)
