@@ -235,7 +235,8 @@ class Memory(object):
     def return_random(self, size, index):
         if isinstance(index, torch.Tensor):
             index = index.tolist()
-        allowed = [x for x in range(2000) if x not in index]
+        #allowed = [x for x in range(2000) if x not in index]
+        allowed = [x for x in range(index[0])] + [x for x in range(index[0] + 1, 2000)]
         index = random.sample(allowed, size)
         return self.memory[index,:]
     def return_representations(self, index):
