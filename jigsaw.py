@@ -38,7 +38,7 @@ class JigsawLoader(DatasetFolder):
         
         crop_areas = [(i*85, j*85, (i+1)*85, (j+1)*85) for i in range(3) for j in range(3)]
         samples = [sample.crop(crop_area) for crop_area in crop_areas]
-        samples = [torchvision.transforms.RandomCrop(64,64)(patch) for patch in samples]
+        samples = [torchvision.transforms.RandomCrop((64,64))(patch) for patch in samples]
         #augmentation collor jitter
         image = self.color_transform(image)
         samples = [self.color_transform(patch) for patch in samples]
