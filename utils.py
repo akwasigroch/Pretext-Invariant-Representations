@@ -17,6 +17,7 @@ class AverageMeter(object):
     https://github.com/keras-team/keras
     '''
     """Computes and stores the average and current value"""
+
     def __init__(self, name, fmt=':f'):
         self.name = name
         self.fmt = fmt
@@ -37,9 +38,11 @@ class AverageMeter(object):
     def __str__(self):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
         return fmtstr.format(**self.__dict__)
+
     def return_avg(self):
         return self.avg
-        
+
+
 class Progbar(object):
     '''
     Taken from:
@@ -204,31 +207,31 @@ class Progbar(object):
 
 
 class Memory(object):
-    def __init__(self, device, size = 2000, weight = 0.5):
+    def __init__(self, device, size=2000, weight=0.5):
         self.memory = np.zeros((size, 128))
         self.weighted_sum = np.zeros((size, 128))
         self.weighted_count = 0
         self.weight = weight
         self.device = device
-        
+
     def initialize(self, net, train_loader):
         self.update_weighted_count()
         print('Saving representations to memory')
         bar = Progbar(len(train_loader), stateful_metrics=[])
         for step, batch in enumerate(train_loader):
-            with torch.no_grad():                
+            with torch.no_grad():
                 images = batch['original'].to(self.device)
                 index = batch['index']
-                output = net(images = images, mode = 0)                
+                output = net(images=images, mode=0)
                 self.weighted_sum[index, :] = output.cpu().numpy()
                 self.memory[index, :] = self.weighted_sum[index, :]
-                bar.update(step, values= [])
-                
+                bar.update(step, values=[])
+
     def update(self, index, values):
-        self.weighted_sum[index, :] = values + (1 - self.weight) * self.weighted_sum[index, :] 
+        self.weighted_sum[index, :] = values + (1 - self.weight) * self.weighted_sum[index, :]
         self.memory[index, :] = self.weighted_sum[index, :]/self.weighted_count
         pass
-    
+
     def update_weighted_count(self):
         self.weighted_count = 1 + (1 - self.weight) * self.weighted_count
 
@@ -238,16 +241,18 @@ class Memory(object):
         #allowed = [x for x in range(2000) if x not in index]
         allowed = [x for x in range(index[0])] + [x for x in range(index[0] + 1, 2000)]
         index = random.sample(allowed, size)
-        return self.memory[index,:]
+        return self.memory[index, :]
+
     def return_representations(self, index):
         if isinstance(index, torch.Tensor):
             index = index.tolist()
-        return torch.Tensor(self.memory[index,:])
+        return torch.Tensor(self.memory[index, :])
+
 
 class ModelCheckpoint():
     def __init__(self, mode, directory):
         self.directory = directory
-        if mode =='min':
+        if mode == 'min':
             self.best = np.inf
             self.monitor_op = np.less
         elif mode == 'max':
@@ -261,39 +266,42 @@ class ModelCheckpoint():
             os.mkdir(self.directory)
         else:
             os.mkdir(self.directory)
-            
+
     def save_model(self, model, current_value, epoch):
         if self.monitor_op(current_value, self.best):
             print('\nSave model, best value {:.3f}, epoch: {}'.format(current_value, epoch))
             self.best = current_value
-            torch.save(model.state_dict(), os.path.join(self.directory,'epoch_{}'.format(epoch)))
+            torch.save(model.state_dict(), os.path.join(self.directory, 'epoch_{}'.format(epoch)))
+
 
 class NoiseContrastiveEstimator():
     def __init__(self, device):
         self.device = device
-    def __call__(self, original_features, path_features, index, memory, negative_nb = 1000):   
+
+    def __call__(self, original_features, path_features, index, memory, negative_nb=1000):
         loss = 0
-        for i in range(original_features.shape[0]): 
-            
-            temp = 0.07 
+        for i in range(original_features.shape[0]):
+
+            temp = 0.07
             cos = torch.nn.CosineSimilarity()
             criterion = torch.nn.CrossEntropyLoss()
-             
-            negative = memory.return_random(size = negative_nb, index = [index[i]])
+
+            negative = memory.return_random(size=negative_nb, index=[index[i]])
             negative = torch.Tensor(negative).to(self.device).detach()
-            
-            image_to_modification_similarity = cos(original_features[None, i,:], path_features[None, i,:])/temp
-            matrix_of_similarity = cos(path_features[None, i,:], negative) / temp 
-            
-            
+
+            image_to_modification_similarity = cos(original_features[None, i, :], path_features[None, i, :])/temp
+            matrix_of_similarity = cos(path_features[None, i, :], negative) / temp
+
             similarities = torch.cat((image_to_modification_similarity, matrix_of_similarity))
-            loss += criterion(similarities[None,:], torch.tensor([0]).to(self.device))
+            loss += criterion(similarities[None, :], torch.tensor([0]).to(self.device))
         return loss / original_features.shape[0]
+
 
 def pil_loader(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('RGB')
+
 
 class Logger:
     def __init__(self, file_name):
@@ -301,7 +309,8 @@ class Logger:
         index = ['Epoch']
         with open('{}.csv'.format(self.file_name), 'w') as file:
             file.write('Epoch,Loss,Time\n')
+
     def update(self, epoch, loss):
         now = datetime.datetime.now()
         with open('{}.csv'.format(self.file_name), 'a') as file:
-            file.write('{},{:.4f},{}\n'.format(epoch,loss,now))
+            file.write('{},{:.4f},{}\n'.format(epoch, loss, now))
