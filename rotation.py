@@ -1,13 +1,15 @@
-import torchvision
+import random
+
+import numpy as np
 import torch
 import torch.nn as nn
-from torchvision.models.resnet import resnet50
-from torchvision.datasets import DatasetFolder
-import numpy as np
-import random
 import torch.optim as optim
-from utils import AverageMeter, Progbar, Memory, ModelCheckpoint, NoiseContrastiveEstimator, pil_loader, Logger
+import torchvision
+from torchvision.datasets import DatasetFolder
+from torchvision.models.resnet import resnet50
 
+from utils import (AverageMeter, Logger, Memory, ModelCheckpoint,
+                   NoiseContrastiveEstimator, Progbar, pil_loader)
 
 device = torch.device('cuda:2')
 data_dir = '/media/dysk/datasets/isic_challenge_2017/train'
@@ -142,8 +144,3 @@ for epoch in range(1000):
 
     #save model if improved
     checkpoint.save_model(net, train_loss.return_avg(), epoch)
-
-
-        
-    
-

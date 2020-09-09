@@ -1,14 +1,14 @@
-import sys
 import collections
+import datetime
+import os
+import random
+import shutil
+import sys
 import time
+
 import numpy as np
 import torch
-import random
-import os
-import shutil
 from PIL import Image
-import datetime
-
 
 
 class AverageMeter(object):
